@@ -1,0 +1,360 @@
+@{
+    ViewData["Title"] = "Download";
+}
+
+<div class="container mt-4">
+    <h1 class="mb-4">@ViewData["Title"]</h1>
+
+    @if (!string.IsNullOrEmpty(ViewBag.Message as string))
+    {
+        <div class="alert @(ViewBag.IsError == true ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+            @ViewBag.Message
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card" id="filterCard">
+                <div class="card-body">
+                    <form id="filterForm">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="assembly" class="form-label">Select Assembly</label>
+                                <select class="form-select" id="assembly" name="assembly">
+                                    <option value="">-- All Assemblies --</option>
+                                    @foreach (var assembly in ViewBag.Assemblies)
+                                    {
+                                        <option value="@assembly.Number" data-booth-count="@assembly.BoothCount">@assembly.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Enter Booth number range</label>
+                                <input type="text" class="form-control" id="boothRange" name="boothRange"
+                                       placeholder="Booth number range like 20-45" autocomplete="off" inputmode="numeric" pattern="[0-9\- ]*">
+                                <div id="boothRangeError" class="text-danger small mt-1" style="display:none;"></div>
+                                <div class="form-text text-muted" id="availableBoothsHint" style="display:none;">Available booths: <span id="availableBoothCount"></span></div>
+                            </div>
+                        </div>
+
+                        <div class="text-center gap-2">
+                            <button type="submit" class="btn btn-primary" id="downloadBtn" disabled>
+                                <span id="downloadSpinner" class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>
+                                <i class="bi bi-download me-2"></i>
+                                <span id="downloadBtnText">Download CSV</span>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="resetFilter">
+                                <i class="bi bi-arrow-counterclockwise me-2"></i>Reset
+                            </button>
+                        </div>
+                    </form>
+                    <div id="statusArea" class="visually-hidden" aria-live="polite"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="loadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5>Processing your request...</h5>
+                <p class="text-muted mb-0">Please wait while we filter and prepare your CSV file.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script>
+        // Prevent back button from loading cached page after logout
+        window.history.pushState(null, "", window.location.href);
+        window.onpopstate = function() {
+            window.history.pushState(null, "", window.location.href);
+        };
+
+        let loadingVisible = false;
+
+        document.addEventListener('DOMContentLoaded', function() {
+
+             const assemblyDropdown = document.getElementById('assembly');
+             assemblyDropdown.addEventListener('change', function() {
+                 // Update available booths hint based on selected option's data attribute
+                 const hint = document.getElementById('availableBoothsHint');
+                 const countEl = document.getElementById('availableBoothCount');
+                 const selectedOption = this.options[this.selectedIndex];
+                 const boothCount = selectedOption?.dataset?.boothCount;
+                 if (this.value && boothCount) {
+                     countEl.textContent = boothCount;
+                     hint.style.display = 'block';
+                 } else {
+                     hint.style.display = 'none';
+                 }
+
+                 // Re-validate booth range and update button state
+                 validateBoothRange();
+                 updateDownloadBtnState();
+             });
+
+            // Initialize hint based on current selection (if any)
+            assemblyDropdown.dispatchEvent(new Event('change'));
+
+            // Filter form submission
+            document.getElementById('filterForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                // Final client-side validation before sending
+                if (!validateBoothRange()) {
+                    showAlert('danger', 'Please correct validation errors before downloading.');
+                    return;
+                }
+                await downloadFile();
+            });
+
+            // Validate booth range while typing (debounced)
+            const boothEl = document.getElementById('boothRange');
+            if (boothEl) {
+                boothEl.addEventListener('input', debounce(function() {
+                    validateBoothRange();
+                    updateDownloadBtnState();
+                }, 300));
+            }
+
+            // Reset button
+            document.getElementById('resetFilter').addEventListener('click', function() {
+                document.getElementById('assembly').value = '';
+                document.getElementById('boothRange').value = '';
+                document.getElementById('downloadBtn').disabled = true;
+                // Hide hint when filters are reset
+                const hint = document.getElementById('availableBoothsHint'); if (hint) hint.style.display = 'none';
+            });
+        });
+
+        // Centralized, idempotent show/hide helper for loading modal
+        function showLoading() {
+            try {
+                const modalEl = document.getElementById('loadingModal');
+                if (!modalEl) return;
+
+                // Prefer existing instance if available, else create one
+                let instance = null;
+                try {
+                    instance = bootstrap.Modal && typeof bootstrap.Modal.getOrCreateInstance === 'function'
+                        ? bootstrap.Modal.getOrCreateInstance(modalEl)
+                        : (bootstrap.Modal && typeof bootstrap.Modal === 'function' ? new bootstrap.Modal(modalEl) : null);
+                        instance?.show();
+                        loadingVisible = true;
+                } catch (inner) {}
+            } catch (e) {}
+        }
+
+        function hideLoading() {
+            try {
+                if (!loadingVisible) {
+                    // Still do a quick DOM cleanup in case a stray backdrop exists
+                    document.body.classList.remove('modal-open');
+                    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                    return;
+                }
+
+                const modalEl = document.getElementById('loadingModal');
+                if (modalEl) {
+                    try {
+                        const instance = bootstrap.Modal && typeof bootstrap.Modal.getInstance === 'function' ? bootstrap.Modal.getInstance(modalEl) : null;
+                        if (instance && typeof instance.hide === 'function') instance.hide();
+                        if (instance && typeof instance.dispose === 'function') instance.dispose();
+                    } catch (e) {}
+
+                    // Defensive DOM cleanup
+                    modalEl.classList.remove('show');
+                    modalEl.style.display = 'none';
+                    modalEl.setAttribute('aria-hidden', 'true');
+                    modalEl.removeAttribute('aria-modal');
+                }
+
+                document.body.classList.remove('modal-open');
+                document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+
+                loadingVisible = false;
+            } catch (e) {}
+        }
+
+        // Debounce helper
+        function debounce(fn, delay) {
+            let timer;
+            return function(...args) {
+                clearTimeout(timer);
+                timer = setTimeout(() => fn.apply(this, args), delay);
+            };
+        }
+
+        function validateBoothRange() {
+            const errEl = document.getElementById('boothRangeError');
+            const value = document.getElementById('boothRange')?.value?.trim() || '';
+            if (!value) { errEl.style.display = 'none'; errEl.textContent = ''; return true; }
+            // Accept single number or range like 20-45
+            if (!/^\d+(?:-\d+)?$/.test(value)) {
+                errEl.textContent = 'Invalid format. Use "20" or "20-45".';
+                errEl.style.display = 'block';
+                return false;
+            }
+            const parts = value.split('-').map(s => parseInt(s, 10));
+            if (parts.length === 2 && parts[1] < parts[0]) {
+                errEl.textContent = 'Invalid range: end must be greater than or equal to start.';
+                errEl.style.display = 'block';
+                return false;
+            }
+            // Validate against selected assembly booth count if available
+            const assemblyEl = document.getElementById('assembly');
+            const selectedOption = assemblyEl && assemblyEl.options && assemblyEl.selectedIndex >= 0 ? assemblyEl.options[assemblyEl.selectedIndex] : null;
+            const boothCount = selectedOption && selectedOption.dataset && selectedOption.dataset.boothCount ? parseInt(selectedOption.dataset.boothCount, 10) : null;
+            if (boothCount) {
+                const start = parts[0];
+                const end = parts.length === 2 ? parts[1] : parts[0];
+                if (start < 1 || end > boothCount) {
+                    errEl.textContent = `Requested booth number(s) out of range (1-${boothCount}).`;
+                    errEl.style.display = 'block';
+                    return false;
+                }
+            }
+            errEl.style.display = 'none'; errEl.textContent = '';
+            return true;
+        }
+
+        function updateDownloadBtnState() {
+            const assemblyEl = document.getElementById('assembly');
+            const btn = document.getElementById('downloadBtn');
+            const hasAssembly = assemblyEl && assemblyEl.value;
+            const validBooth = validateBoothRange();
+            btn.disabled = !hasAssembly || !validBooth;
+        }
+
+        function setRequestInFlight(inFlight) {
+            const btn = document.getElementById('downloadBtn');
+            const spinner = document.getElementById('downloadSpinner');
+            if (inFlight) {
+                btn.disabled = true;
+                if (spinner) spinner.classList.remove('d-none');
+            } else {
+                const assemblyEl = document.getElementById('assembly');
+                const hasAssembly = assemblyEl && assemblyEl.value;
+                btn.disabled = !hasAssembly || !validateBoothRange();
+                if (spinner) spinner.classList.add('d-none');
+            }
+        }
+
+        async function downloadFile() {
+            const assemblyEl = document.getElementById('assembly');
+            const assemblyNumber = assemblyEl ? assemblyEl.value : '';
+            const selectedOption = assemblyEl && assemblyEl.options && assemblyEl.selectedIndex >= 0 ? assemblyEl.options[assemblyEl.selectedIndex] : null;
+            const assemblyName = selectedOption ? selectedOption.text : null;
+            const boothRange = document.getElementById('boothRange')?.value?.trim() || '';
+
+            if (!assemblyNumber) {
+                showAlert('danger', 'Please select an Assembly.');
+                return;
+            }
+
+            // Show loading modal (idempotent)
+            showLoading();
+
+            try {
+                const response = await fetch('/FileDownload/Download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        AssemblyNumber: assemblyNumber || null,
+                        AssemblyName: assemblyName || null,
+                        BoothRange: boothRange.length > 0 ? boothRange : null
+                    })
+                });
+
+                // Check if response is JSON (error) or CSV (success)
+                const contentType = response.headers.get('Content-Type');
+                if (contentType && contentType.includes('application/json')) {
+                    // Error response (JSON)
+                    const data = await response.json().catch(() => null);
+                    hideLoading();
+                    showAlert('danger', (data && data.message) ? String(data.message) : 'Failed to download file');
+                    return;
+                }
+
+                if (!response.ok) {
+                    // Non-JSON error response (attempt to parse, but tolerant to parse failures)
+                    const data = await response.json().catch(() => null);
+                    hideLoading();
+                    showAlert('danger', (data && data.message) ? String(data.message) : 'Failed to download file');
+                    return;
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+
+                // Extract filename from Content-Disposition header or construct from assembly code
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = assemblyNumber ? `${assemblyNumber}.csv` : 'download.csv';
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                    if (filenameMatch && filenameMatch[1]) {
+                        filename = filenameMatch[1].replace(/['"]/g, '');
+                    }
+                }
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                showAlert('success', 'CSV file downloaded successfully!');
+            } catch (error) {
+                hideLoading();
+                showAlert('danger', error && error.message ? String(error.message) : 'An unexpected error occurred');
+            } finally {
+                // Final defensive hide in case any path missed it
+                hideLoading();
+            }
+        }
+
+        function showAlert(type, message) {
+            try {
+                // Remove external detection iframe if present (some bots/proxies inject this)
+                try { const ping = document.getElementById('PING_IFRAME_FORM_DETECTION'); if (ping) ping.remove(); } catch (e) {}
+
+                // Normalize message and guard against literal 'null' or 'undefined'
+                let text = '';
+                if (message === null || message === undefined) text = '';
+                else text = String(message).trim();
+                if (!text || text.toLowerCase() === 'null' || text.toLowerCase() === 'undefined') text = '';
+
+                const defaultMsg = type === 'success' ? 'Done.' : 'An error occurred';
+                const finalMsg = text || defaultMsg;
+
+                const alert = document.createElement('div');
+                alert.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3`;
+                alert.style.zIndex = '9999';
+
+                const icon = document.createElement('i');
+                icon.className = `bi bi-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}`;
+                alert.appendChild(icon);
+
+                const textNode = document.createTextNode(' ' + finalMsg);
+                alert.appendChild(textNode);
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn-close';
+                btn.setAttribute('data-bs-dismiss', 'alert');
+                alert.appendChild(btn);
+
+                document.body.appendChild(alert);
+                setTimeout(() => alert.remove(), 5000);
+            } catch (e) {}
+        }
+    </script>
+}

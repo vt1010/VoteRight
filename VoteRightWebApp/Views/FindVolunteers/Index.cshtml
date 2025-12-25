@@ -1,0 +1,118 @@
+@{
+    ViewData["Title"] = "Find Volunteers";
+    ViewData["BodyClass"] = "volunteers-page";
+}
+
+<div class="container mt-4">
+    <h1 class="mb-4">Find Volunteers</h1>
+    <div class="card">
+        <div class="card-body">
+            <p>
+                Use this page to search for registered volunteers in your district or assembly.
+            </p>
+            @* Search Form *@
+            <form asp-action="Search" method="post" class="row g-3">
+                <div class="col-md-6">
+                    <label for="district" class="form-label">District</label>
+                    @* District Dropdown *@
+                    <select id="district" name="district" class="form-select" required>
+                        <option value="">Select District</option>
+                        @foreach (var district in ViewBag.Districts)
+                        {
+                            dynamic? isSelected = ViewBag.SelectedDistrict != null && ViewBag.SelectedDistrict.ToString() == district;
+                            <option value="@district" selected="@isSelected">@district</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="assembly" class="form-label">Assembly</label>
+                    @* Assembly Dropdown (initially disabled and empty) *@
+                    @{
+                        var isAssemblyDisabled = ViewBag.Assemblies == null || ViewBag.Assemblies.Count == 0;
+                    }
+                    <select id="assemblyNumber" name="assemblyNumber" class="form-select" @(isAssemblyDisabled ? "disabled" : "")>
+                        <option value="">Select Assembly</option>
+                        @if (ViewBag.Assemblies != null)
+                        {
+                            foreach (dynamic assembly in ViewBag.Assemblies)
+                            {
+                                dynamic? isSelected = ViewBag.SelectedAssemblyNumber != null && ViewBag.SelectedAssemblyNumber.ToString() == assembly.Number;
+                                <option value="@assembly.Number" selected="@isSelected">@assembly.Name</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-12 text-end">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+            </form>
+
+            @* Display Results *@
+            @if (ViewBag.Users != null)
+            {
+                var users = ViewBag.Users as IEnumerable<dynamic>;
+                if (users != null && users.Any())
+                {
+                    <div class="mt-4">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>WhatsAppNumber</th>
+                                    <th>Political party/organization</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var user in users)
+                                {
+                                    <tr>
+                                        <td>@user.Name</td>
+                                        <td>@user.WhatsAppNumber</td>
+                                        <td>@user.PoliticalPartyOrganization</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="mt-4 text-center text-muted">
+                        No results found.
+                    </div>
+                }
+            }
+
+            <div id="volunteerResults" class="mt-4">
+                <!-- Volunteer search results will appear here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('district').addEventListener('change', function () {
+            var selectedDistrict = this.value;
+            var assemblyDropdown = document.getElementById('assemblyNumber');
+            assemblyDropdown.innerHTML = '<option value="">Select Assembly</option>';
+            assemblyDropdown.disabled = true;
+            if (selectedDistrict === "") {
+                return;
+            }
+            fetch('/FindVolunteers/GetAssembliesByDistrict?district=' + encodeURIComponent(selectedDistrict))
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        data.forEach(function (assembly) {
+                            var opt = document.createElement('option');
+                            opt.value = assembly.number;
+                            opt.textContent = assembly.name;
+                            assemblyDropdown.appendChild(opt);
+                        });
+                        assemblyDropdown.disabled = false;
+                    }
+                });
+        });
+    </script>
+}

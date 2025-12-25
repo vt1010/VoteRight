@@ -1,0 +1,38 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": ".NET Launch (web)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/VoteRightWebApp/bin/Debug/net10.0/VoteRightWebApp.dll",
+      "cwd": "${workspaceFolder}/VoteRightWebApp",
+      "stopAtEntry": false,
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+      },
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "sourceFileMap": {
+        "/Views": "${workspaceFolder}/VoteRightWebApp/Views"
+      }
+    },
+    {
+      "name": "Launch Chrome (https://localhost:7090)",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "https://localhost:7090",
+      "webRoot": "${workspaceFolder}"
+    },
+    {
+      "name": "Launch Chrome (http://localhost:5144)",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "http://localhost:5144",
+      "webRoot": "${workspaceFolder}"
+    }
+  ]
+}
