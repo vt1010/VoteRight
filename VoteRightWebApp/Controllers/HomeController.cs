@@ -27,9 +27,9 @@ public class HomeController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> SignIn(string phoneNumber)
+    public async Task<IActionResult> SignIn(int phoneNumber)
     {
-        if (string.IsNullOrEmpty(phoneNumber))
+        if (phoneNumber == 0)
         {
             ViewBag.Error = "Please enter your phone number";
             return View();
@@ -46,7 +46,7 @@ public class HomeController : Controller
         // Store user info in session
         HttpContext.Session.SetInt32("UserId", user.Id);
         HttpContext.Session.SetString("UserName", user.Name);
-        HttpContext.Session.SetString("UserPhone", user.PhoneNumber);
+        HttpContext.Session.SetInt32("UserPhone", user.PhoneNumber);
         HttpContext.Session.SetString("UserDistrict", user.District);
 
         return RedirectToAction("Index", "FileDownload");
@@ -60,11 +60,11 @@ public class HomeController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> SignUp(string name, string phoneNumber, string whatsAppNumber,
+    public async Task<IActionResult> SignUp(string name, int phoneNumber, int whatsAppNumber,
                                 string district, string politicalPartyOrganization, string organizationalPosition)
     {
-        
-        if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(phoneNumber) ||
+
+        if (string.IsNullOrEmpty(name) || phoneNumber == 0 ||
             string.IsNullOrEmpty(district) || string.IsNullOrEmpty(politicalPartyOrganization))
         {
             ViewBag.Error = "Please fill in all required fields";
@@ -97,7 +97,7 @@ public class HomeController : Controller
         // Store user info in session
         HttpContext.Session.SetInt32("UserId", user.Id);
         HttpContext.Session.SetString("UserName", name);
-        HttpContext.Session.SetString("UserPhone", phoneNumber);
+        HttpContext.Session.SetInt32("UserPhone", phoneNumber);
         HttpContext.Session.SetString("UserDistrict", district);
 
         return RedirectToAction("Index", "FileDownload");

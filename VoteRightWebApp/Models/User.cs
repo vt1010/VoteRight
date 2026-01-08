@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Numerics;
 
 namespace VoteRightWebApp.Models;
 
@@ -13,10 +14,11 @@ public class User
 
     [Required]
     [MaxLength(20)]
-    public string PhoneNumber { get; set; } = string.Empty;
+    public int PhoneNumber { get; set; } 
 
+    [Required]
     [MaxLength(20)]
-    public string? WhatsAppNumber { get; set; }
+    public int WhatsAppNumber { get; set; } 
 
     [Required]
     [MaxLength(100)]

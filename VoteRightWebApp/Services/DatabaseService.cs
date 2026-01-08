@@ -32,26 +32,21 @@ namespace VoteRightWebApp.Services
             return districts;
         }
 
-        public async Task<User?> FindUserAsync(string phoneNumber)
+        public async Task<User?> FindUserAsync(int phoneNumber)
         {
             await using var conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
-            await using var cmd = new NpgsqlCommand(@"SELECT id, name, phoneNumber, whatsAppNumber, district, politicalPartyOrganization, organizationalPosition, registeredAt
-                                                     FROM Users WHERE phoneNumber = @phone LIMIT 1", conn);
+            await using var cmd = new NpgsqlCommand(@"SELECT id, name, phone_number, district FROM public.users WHERE phone_number = @phone LIMIT 1", conn);
             cmd.Parameters.AddWithValue("phone", phoneNumber);
             await using var reader = await cmd.ExecuteReaderAsync();
             if (await reader.ReadAsync())
             {
                 return new User
                 {
-                    Id = reader.GetInt32(0),
+                    Id = reader.GetInt16(0),
                     Name = reader.GetString(1),
-                    PhoneNumber = reader.GetString(2),
-                    WhatsAppNumber = reader.IsDBNull(3) ? null : reader.GetString(3),
-                    District = reader.GetString(4),
-                    PoliticalPartyOrganization = reader.GetString(5),
-                    OrganizationalPosition = reader.IsDBNull(6) ? null : reader.GetString(6),
-                    RegisteredAt = reader.GetDateTime(7)
+                    PhoneNumber = reader.GetInt16(2),
+                    District = reader.GetString(3)
                 };
             }
             return null;
@@ -61,7 +56,7 @@ namespace VoteRightWebApp.Services
         {
             await using var conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
-            await using var cmd = new NpgsqlCommand(@"INSERT INTO Users (name, phoneNumber, whatsAppNumber, district, politicalPartyOrganization, organizationalPosition, registeredAt)
+            await using var cmd = new NpgsqlCommand(@"INSERT INTO public.users (name, phone_number, whatsapp_number, district, political_party_organization, organizational_position, registered_at)
                                                      VALUES (@name, @phone, @wa, @district, @org, @pos, @reg)
                                                      RETURNING id", conn);
             cmd.Parameters.AddWithValue("name", user.Name);
@@ -71,7 +66,7 @@ namespace VoteRightWebApp.Services
             cmd.Parameters.AddWithValue("org", user.PoliticalPartyOrganization);
             cmd.Parameters.AddWithValue("pos", (object?)user.OrganizationalPosition ?? DBNull.Value);
             cmd.Parameters.AddWithValue("reg", user.RegisteredAt);
-            var newId = (int)(await cmd.ExecuteScalarAsync() ?? 0);
+            var newId = (Int32)(await cmd.ExecuteScalarAsync() ?? 0);
             user.Id = newId;
         }
 
@@ -82,10 +77,10 @@ namespace VoteRightWebApp.Services
             conn.Open();
 
             string sql = string.IsNullOrEmpty(assembly)
-                ? @"SELECT DISTINCT id, name, phoneNumber, whatsAppNumber, district, politicalPartyOrganization, organizationalPosition, registeredAt
-                    FROM Users WHERE district = @district"
-                : @"SELECT DISTINCT u.id, u.name, u.phoneNumber, u.whatsAppNumber, u.district, u.politicalPartyOrganization, u.organizationalPosition, u.registeredAt
-                    FROM Users u INNER JOIN Downloads d ON u.id = d.userId
+                ? @"SELECT DISTINCT id, name, phone_number, whatsapp_number, district, political_party_organization, organizational_position, registered_at
+                    FROM public.users WHERE district = @district"
+                : @"SELECT DISTINCT u.id, u.name, u.phone_number, u.whatsapp_number, u.district, u.political_party_organization, u.organizational_position, u.registered_at
+                    FROM public.users u INNER JOIN public.downloads d ON u.id = d.userId
                     WHERE u.district = @district AND d.assembly = @assembly";
 
             using var cmd = new NpgsqlCommand(sql, conn);
@@ -100,8 +95,8 @@ namespace VoteRightWebApp.Services
                 {
                     Id = reader.GetInt32(0),
                     Name = reader.GetString(1),
-                    PhoneNumber = reader.GetString(2),
-                    WhatsAppNumber = reader.IsDBNull(3) ? null : reader.GetString(3),
+                    PhoneNumber = reader.GetInt16(2),
+                    WhatsAppNumber = reader.GetInt16(3),
                     District = reader.GetString(4),
                     PoliticalPartyOrganization = reader.GetString(5),
                     OrganizationalPosition = reader.IsDBNull(6) ? null : reader.GetString(6),
