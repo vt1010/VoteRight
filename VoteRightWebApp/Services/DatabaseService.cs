@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Npgsql;
 using VoteRightWebApp.Models;
+using VoteRightWebApp.Data;
 
 namespace VoteRightWebApp.Services
 {
@@ -15,15 +16,29 @@ namespace VoteRightWebApp.Services
                 ?? throw new InvalidOperationException("PostgresConnection not configured.");
         }
 
+        public async Task<List<dynamic>> GetAssembliesAsync()
+        {
+            var list = new List<dynamic>();
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync();
+            await using var cmd = new NpgsqlCommand(SqlQueries.Assemblies.DistinctWithBoothCount, conn);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                var name = reader.GetString(0);
+                var number = reader.GetString(1);
+                var boothCount = reader.GetInt32(2);
+                list.Add(new { Name = name, Number = number, BoothCount = boothCount });
+            }
+            return list;
+        }
+
         public async Task<List<string>> GetDistinctDistrictsAsync()
         {
             var districts = new List<string>();
             await using var conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
-            await using var cmd = new NpgsqlCommand(@"SELECT DISTINCT district
-                                                    FROM public.metadata
-                                                    WHERE district IS NOT NULL AND district <> ''
-                                                    ORDER BY district", conn);
+            await using var cmd = new NpgsqlCommand(SqlQueries.Metadata.DistinctDistricts, conn);
             await using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
@@ -36,7 +51,7 @@ namespace VoteRightWebApp.Services
         {
             await using var conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
-            await using var cmd = new NpgsqlCommand(@"SELECT id, name, phone_number, district FROM public.users WHERE phone_number = @phone LIMIT 1", conn);
+            await using var cmd = new NpgsqlCommand(SqlQueries.Users.FindByPhone, conn);
             cmd.Parameters.AddWithValue("phone", phoneNumber);
             await using var reader = await cmd.ExecuteReaderAsync();
             if (await reader.ReadAsync())
@@ -56,9 +71,7 @@ namespace VoteRightWebApp.Services
         {
             await using var conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
-            await using var cmd = new NpgsqlCommand(@"INSERT INTO public.users (name, phone_number, whatsapp_number, district, political_party_organization, organizational_position, registered_at)
-                                                     VALUES (@name, @phone, @wa, @district, @org, @pos, @reg)
-                                                     RETURNING id", conn);
+            await using var cmd = new NpgsqlCommand(SqlQueries.Users.Insert, conn);
             cmd.Parameters.AddWithValue("name", user.Name);
             cmd.Parameters.AddWithValue("phone", user.PhoneNumber);
             cmd.Parameters.AddWithValue("wa", (object?)user.WhatsAppNumber ?? DBNull.Value);
@@ -77,11 +90,8 @@ namespace VoteRightWebApp.Services
             conn.Open();
 
             string sql = string.IsNullOrEmpty(assembly)
-                ? @"SELECT DISTINCT id, name, phone_number, whatsapp_number, district, political_party_organization, organizational_position, registered_at
-                    FROM public.users WHERE district = @district"
-                : @"SELECT DISTINCT u.id, u.name, u.phone_number, u.whatsapp_number, u.district, u.political_party_organization, u.organizational_position, u.registered_at
-                    FROM public.users u INNER JOIN public.downloads d ON u.id = d.userId
-                    WHERE u.district = @district AND d.assembly = @assembly";
+                ? SqlQueries.Users.SelectByDistrict
+                : SqlQueries.Users.SelectByDistrictAndAssemblyJoinDownloads;
 
             using var cmd = new NpgsqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("district", district);
@@ -110,9 +120,7 @@ namespace VoteRightWebApp.Services
         {
             await using var conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
-            await using var cmd = new NpgsqlCommand(@"INSERT INTO Downloads (userId, assembly, booths, deviceType, downloadedAt)
-                                                     VALUES (@userId, @assembly, @booths, @deviceType, @downloadedAt)
-                                                     RETURNING id", conn);
+            await using var cmd = new NpgsqlCommand(SqlQueries.Downloads.Insert, conn);
             cmd.Parameters.AddWithValue("userId", download.UserId);
             cmd.Parameters.AddWithValue("assembly", download.Assembly);
             cmd.Parameters.AddWithValue("booths", (object?)download.Booths ?? DBNull.Value);

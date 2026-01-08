@@ -27,6 +27,8 @@ try
 
     // Register LocationDataService and caches
     builder.Services.AddMemoryCache();
+    builder.Services.AddScoped<ICsvExportService, CsvExportService>();
+    builder.Services.AddScoped<IVoterExportService, VoterExportService>();
 
     // Add services to the container.
     builder.Services.AddControllersWithViews()
@@ -47,8 +49,6 @@ try
 
     // No Entity Framework: database access handled via ADO.NET in DatabaseService
 
-    // Use Postgres-backed implementation for CSV export
-    
     // Remove legacy services from compilation if still present (LocalFileService/S3Service not registered)
     builder.Services.AddScoped<DatabaseService>();
 
