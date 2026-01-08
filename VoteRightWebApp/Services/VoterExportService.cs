@@ -59,9 +59,8 @@ public class VoterExportService : IVoterExportService
             sql.Append(SqlQueries.Voters.RangeClause);
         }
         sql.Append(SqlQueries.Voters.OrderByPartNoSerialNo);
-
         await using var cmd = new NpgsqlCommand(sql.ToString(), conn);
-        cmd.Parameters.AddWithValue("assembly", assemblyName);
+        cmd.Parameters.AddWithValue("assembly", "%" + assemblyName + "%");
         if (startPartNo.HasValue && endPartNo.HasValue)
         {
             cmd.Parameters.AddWithValue("start", startPartNo.Value);
@@ -70,7 +69,7 @@ public class VoterExportService : IVoterExportService
 
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
 
-        using var writer = new StreamWriter(outputStream, new UTF8Encoding(false), bufferSize: 64 * 1024, leaveOpen: true);
+        await using var writer = new StreamWriter(outputStream, new UTF8Encoding(true), bufferSize: 64 * 1024, leaveOpen: true);
         var headers = new [] { "document_id","serial_no","epic_no","name","relation_type","father_name","mother_name","husband_name","other_name","house_no","age","gender","street_names_and_numbers","part_no","assembly","epic_valid","deleted" };
         await _csvExportService.WriteAsync(reader, writer, headers, cancellationToken);
         await writer.FlushAsync();

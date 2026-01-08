@@ -58,9 +58,9 @@ namespace VoteRightWebApp.Services
             {
                 return new User
                 {
-                    Id = reader.GetInt16(0),
+                    Id = reader.GetInt32(0),
                     Name = reader.GetString(1),
-                    PhoneNumber = reader.GetInt16(2),
+                    PhoneNumber = reader.GetInt32(2),
                     District = reader.GetString(3)
                 };
             }
@@ -79,7 +79,7 @@ namespace VoteRightWebApp.Services
             cmd.Parameters.AddWithValue("org", user.PoliticalPartyOrganization);
             cmd.Parameters.AddWithValue("pos", (object?)user.OrganizationalPosition ?? DBNull.Value);
             cmd.Parameters.AddWithValue("reg", user.RegisteredAt);
-            var newId = (Int32)(await cmd.ExecuteScalarAsync() ?? 0);
+            var newId = (int)(await cmd.ExecuteScalarAsync() ?? 0);
             user.Id = newId;
         }
 

@@ -36,7 +36,10 @@ public class FileDownloadController : Controller
 
         var fileName = (request.AssemblyNumber ?? request.AssemblyName ?? "download") + ".csv";
         Response.ContentType = "text/csv";
-        Response.Headers["Content-Disposition"] = $"attachment; filename={fileName}";
+        Response.Headers.ContentDisposition = new Microsoft.Net.Http.Headers.ContentDispositionHeaderValue("attachment")
+        {
+            FileNameStar = fileName
+        }.ToString();
 
         try
         {

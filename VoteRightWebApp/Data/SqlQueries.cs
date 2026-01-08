@@ -12,17 +12,17 @@ public static class SqlQueries
 
     public static class Users
     {
-        public const string FindByPhone = @"SELECT id, name, phoneNumber, whatsAppNumber, district, politicalPartyOrganization, organizationalPosition, registeredAt
-                                           FROM Users WHERE phoneNumber = @phone LIMIT 1";
+        public const string FindByPhone = @"SELECT id, name, phone_number, district
+                                           FROM Users WHERE phone_number = @phone LIMIT 1";
 
-        public const string Insert = @"INSERT INTO Users (name, phoneNumber, whatsAppNumber, district, politicalPartyOrganization, organizationalPosition, registeredAt)
+        public const string Insert = @"INSERT INTO Users (name, phone_number, whatsapp_number, district, political_party_organization, organizational_position, registered_at)
                                        VALUES (@name, @phone, @wa, @district, @org, @pos, @reg)
                                        RETURNING id";
 
-        public const string SelectByDistrict = @"SELECT DISTINCT id, name, phoneNumber, whatsAppNumber, district, politicalPartyOrganization, organizationalPosition, registeredAt
+        public const string SelectByDistrict = @"SELECT DISTINCT id, name, phone_number, whatsapp_number, district, political_party_organization, organizational_position, registered_at
                                                 FROM Users WHERE district = @district";
 
-        public const string SelectByDistrictAndAssemblyJoinDownloads = @"SELECT DISTINCT u.id, u.name, u.phoneNumber, u.whatsAppNumber, u.district, u.politicalPartyOrganization, u.organizationalPosition, u.registeredAt
+        public const string SelectByDistrictAndAssemblyJoinDownloads = @"SELECT DISTINCT u.id, u.name, u.phone_number, u.whatsapp_number, u.district, u.political_party_organization, u.organizational_position, u.registeredAt
                                                                          FROM Users u INNER JOIN Downloads d ON u.id = d.userId
                                                                          WHERE u.district = @district AND d.assembly = @assembly";
     }
@@ -51,9 +51,9 @@ public static class SqlQueries
                                                             husband_name, other_name, house_no, age, gender, street_names_and_numbers,
                                                             part_no, assembly, epic_valid, deleted
                                                      FROM public.voters
-                                                     WHERE assembly = @assembly";
+                                                     WHERE assembly LIKE @assembly";
 
-        public const string RangeClause = " AND part_no BETWEEN @start AND @end";
+        public const string RangeClause = " AND CAST(part_no AS INTEGER) BETWEEN @start AND @end";
         public const string OrderByPartNoSerialNo = " ORDER BY part_no, serial_no";
     }
 }
