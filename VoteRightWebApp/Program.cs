@@ -1,4 +1,3 @@
-using Amazon.S3;
 using VoteRightWebApp.Services;
 using Serilog;
 
@@ -7,6 +6,7 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(new ConfigurationBuilder()
         .AddJsonFile("appsettings.json")
         .Build())
+    .WriteTo.Console()
     .WriteTo.File(
         path: "Logs/app-.txt",
         rollingInterval: RollingInterval.Day,
@@ -26,7 +26,6 @@ try
     builder.Host.UseSerilog();
 
     // Register LocationDataService and caches
-    builder.Services.AddSingleton<ILocationDataService, LocationDataService>();
     builder.Services.AddMemoryCache();
 
     // Add services to the container.
@@ -48,33 +47,9 @@ try
 
     // No Entity Framework: database access handled via ADO.NET in DatabaseService
 
-    // Configure AWS S3 with credentials from appsettings.json
-    var awsAccessKey = builder.Configuration["AWS:AccessKey"];
-    var awsSecretKey = builder.Configuration["AWS:SecretKey"];
-    var awsRegion = builder.Configuration["AWS:Region"];
-
-    if (!string.IsNullOrEmpty(awsAccessKey) && !string.IsNullOrEmpty(awsSecretKey))
-    {
-        // Use explicit credentials from configuration
-        builder.Services.AddSingleton<IAmazonS3>(sp =>
-        {
-            var credentials = new Amazon.Runtime.BasicAWSCredentials(awsAccessKey, awsSecretKey);
-            var config = new Amazon.S3.AmazonS3Config
-            {
-                RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(awsRegion)
-            };
-            return new Amazon.S3.AmazonS3Client(credentials, config);
-        });
-    }
-    //else
-    //{
-    //    // Fallback to default AWS credentials (profile, environment variables, IAM role)
-    //    builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
-    //    builder.Services.AddAWSService<IAmazonS3>();
-    //}
-
-    // Scoped service: Each HTTP request gets its own instance (thread-safe by isolation)
-    builder.Services.AddScoped<IS3Service, S3Service>();
+    // Use Postgres-backed implementation for CSV export
+    
+    // Remove legacy services from compilation if still present (LocalFileService/S3Service not registered)
     builder.Services.AddScoped<DatabaseService>();
 
     // Add response compression for faster downloads
@@ -107,9 +82,8 @@ try
         app.UseExceptionHandler("/Home/Error");
         // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
         app.UseHsts();
+           app.UseHttpsRedirection();
     }
-
-    app.UseHttpsRedirection();
     app.UseRouting();
 
     app.UseSession();

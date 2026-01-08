@@ -15,6 +15,23 @@ namespace VoteRightWebApp.Services
                 ?? throw new InvalidOperationException("PostgresConnection not configured.");
         }
 
+        public async Task<List<string>> GetDistinctDistrictsAsync()
+        {
+            var districts = new List<string>();
+            await using var conn = new NpgsqlConnection(_connectionString);
+            await conn.OpenAsync();
+            await using var cmd = new NpgsqlCommand(@"SELECT DISTINCT district
+                                                    FROM public.metadata
+                                                    WHERE district IS NOT NULL AND district <> ''
+                                                    ORDER BY district", conn);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                districts.Add(reader.GetString(0));
+            }
+            return districts;
+        }
+
         public async Task<User?> FindUserAsync(string phoneNumber)
         {
             await using var conn = new NpgsqlConnection(_connectionString);

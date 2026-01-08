@@ -8,19 +8,16 @@ namespace VoteRightWebApp.Controllers;
 public class HomeController : Controller
 {
     private readonly IWebHostEnvironment _environment;
-    private readonly ILocationDataService _locationDataService;
     private readonly DatabaseService _databaseService;
 
-    public HomeController(IWebHostEnvironment environment, ILocationDataService locationDataService, DatabaseService databaseService)
+    public HomeController(IWebHostEnvironment environment, DatabaseService databaseService)
     {
         _environment = environment;
-        _locationDataService = locationDataService;
         _databaseService = databaseService;
     }
 
     public IActionResult Index()
     {
-        ViewBag.Districts = _locationDataService.GetDistricts();
         return View();
     }
 
@@ -55,10 +52,10 @@ public class HomeController : Controller
         return RedirectToAction("Index", "FileDownload");
     }
 
-    public IActionResult SignUp()
+    public async Task<IActionResult> SignUp()
     {
-        // Use LocationDataService to load districts
-        ViewBag.Districts = _locationDataService.GetDistricts();
+        var districts = await _databaseService.GetDistinctDistrictsAsync();
+        ViewBag.Districts = districts;
         return View();
     }
 
@@ -66,7 +63,6 @@ public class HomeController : Controller
     public async Task<IActionResult> SignUp(string name, string phoneNumber, string whatsAppNumber,
                                 string district, string politicalPartyOrganization, string organizationalPosition)
     {
-        ViewBag.Districts = _locationDataService.GetDistricts();
         
         if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(phoneNumber) ||
             string.IsNullOrEmpty(district) || string.IsNullOrEmpty(politicalPartyOrganization))
@@ -123,8 +119,10 @@ public class HomeController : Controller
         return View();
     }
 
-    public IActionResult FindVolunteers()
+    public async Task<IActionResult> FindVolunteers()
     {
+        var districts = await _databaseService.GetDistinctDistrictsAsync();
+        ViewBag.Districts = districts;
         return View();
     }
 

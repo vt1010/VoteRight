@@ -2,19 +2,40 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": ".NET Launch (web)",
+      "name": ".NET Launch (HTTP)",
       "type": "coreclr",
       "request": "launch",
-      "preLaunchTask": "build",
+      "preLaunchTask": "Build VoteRightWebApp",
       "program": "${workspaceFolder}/VoteRightWebApp/bin/Debug/net10.0/VoteRightWebApp.dll",
       "cwd": "${workspaceFolder}/VoteRightWebApp",
       "stopAtEntry": false,
       "serverReadyAction": {
         "action": "openExternally",
-        "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+        "pattern": "\\bNow listening on:\\s+(http://\\S+)"
       },
       "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5144"
+      },
+      "sourceFileMap": {
+        "/Views": "${workspaceFolder}/VoteRightWebApp/Views"
+      }
+    },
+    {
+      "name": ".NET Launch (HTTPS)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "Build VoteRightWebApp",
+      "program": "${workspaceFolder}/VoteRightWebApp/bin/Debug/net10.0/VoteRightWebApp.dll",
+      "cwd": "${workspaceFolder}/VoteRightWebApp",
+      "stopAtEntry": false,
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https://\\S+)"
+      },
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "https://localhost:7090"
       },
       "sourceFileMap": {
         "/Views": "${workspaceFolder}/VoteRightWebApp/Views"

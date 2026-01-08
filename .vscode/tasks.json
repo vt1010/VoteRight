@@ -15,6 +15,38 @@
 			"group": "build",
 			"problemMatcher": [],
 			"label": "dotnet: build"
+		},
+		{
+			"label": "Build VoteRightWebApp",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"c:\\Project\\VoteRight\\VoteRightWebApp\\VoteRightWebApp.csproj",
+				"-c",
+				"Debug"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build VoteRightWebApp",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"build",
+				"${workspaceFolder}/VoteRightWebApp/VoteRightWebApp.csproj",
+				"-c",
+				"Debug"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": "build"
 		}
 	]
 }
