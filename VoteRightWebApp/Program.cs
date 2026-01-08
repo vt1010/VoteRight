@@ -1,6 +1,4 @@
 using Amazon.S3;
-using Microsoft.EntityFrameworkCore;
-using VoteRightWebApp.Database;
 using VoteRightWebApp.Services;
 using Serilog;
 
@@ -48,9 +46,7 @@ try
         options.Cookie.IsEssential = true;
     });
 
-    // Add SQLite database with DbContext pooling to reduce allocation overhead
-    builder.Services.AddDbContextPool<ApplicationDbContext>(options =>
-        options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=Data/voteright.db"));
+    // No Entity Framework: database access handled via ADO.NET in DatabaseService
 
     // Configure AWS S3 with credentials from appsettings.json
     var awsAccessKey = builder.Configuration["AWS:AccessKey"];
@@ -100,12 +96,7 @@ try
 
     var app = builder.Build();
 
-    // Ensure database is created
-    using (var scope = app.Services.CreateScope())
-    {
-        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        dbContext.Database.EnsureCreated();
-    }
+    // No EF: skip EnsureCreated; database is managed externally
 
     // Enable response compression
     app.UseResponseCompression();

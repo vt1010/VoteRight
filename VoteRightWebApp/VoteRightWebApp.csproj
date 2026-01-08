@@ -10,13 +10,17 @@
     <PackageReference Include="AWSSDK.S3" Version="3.7.417.7" />
     <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="CsvHelper" Version="33.1.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.1">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.1" />
+    <PackageReference Include="Npgsql" Version="8.0.3" />
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Database\ApplicationDbContext.cs" />
+    <Compile Remove="Services\ReadOnlyDatabaseService.cs" />
+    <Compile Remove="Database\AwsPostgresDbContext.cs" />
+    <Compile Remove="Database\AwsPostgresReadOnlyDbContext.cs" />
+    <Compile Remove="Services\ReadOnlyDatabaseService.cs" />
   </ItemGroup>
 
   <ItemGroup>

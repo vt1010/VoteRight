@@ -1,6 +1,5 @@
 using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using VoteRightWebApp.Models;
 using VoteRightWebApp.Services;
 
