@@ -32,6 +32,4 @@ public class User
     public string? OrganizationalPosition { get; set; }
 
     public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;
-
-    public ICollection<Download>? Downloads { get; set; }
 }

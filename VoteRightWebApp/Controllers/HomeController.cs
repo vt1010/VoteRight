@@ -9,11 +9,13 @@ public class HomeController : Controller
 {
     private readonly IWebHostEnvironment _environment;
     private readonly DatabaseService _databaseService;
+    private readonly IUserService _userService;
 
-    public HomeController(IWebHostEnvironment environment, DatabaseService databaseService)
+    public HomeController(IWebHostEnvironment environment, DatabaseService databaseService, IUserService userService)
     {
         _environment = environment;
         _databaseService = databaseService;
+        _userService = userService;
     }
 
     public IActionResult Index()
@@ -36,7 +38,7 @@ public class HomeController : Controller
         }
 
         // Check if user exists in database
-        var user = await _databaseService.FindUserAsync(phoneNumber);
+        var user = await _userService.FindUserAsync(phoneNumber);
         if (user == null)
         {
             ViewBag.Error = "Phone number not found. Please sign up first.";
@@ -72,7 +74,7 @@ public class HomeController : Controller
         }
 
         // Check if user already exists
-        var existingUser = await _databaseService.FindUserAsync(phoneNumber);
+        var existingUser = await _userService.FindUserAsync(phoneNumber);
         if (existingUser != null)
         {
             ViewBag.Error = "Phone number already registered. Please sign in instead.";
@@ -92,7 +94,7 @@ public class HomeController : Controller
         };
 
         // Save to database
-        await _databaseService.AddUserAsync(user);
+        await _userService.AddUserAsync(user);
 
         // Store user info in session
         HttpContext.Session.SetInt32("UserId", user.Id);

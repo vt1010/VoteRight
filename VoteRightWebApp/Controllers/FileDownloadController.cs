@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Net.Http.Headers;
 using System.Text;
 using VoteRightWebApp.Models;
 using VoteRightWebApp.Services;
+using VoteRightWebApp.Utility;
+using UtilHelper = VoteRightWebApp.Utility.DownloadHelper;
 
 namespace VoteRightWebApp.Controllers;
 
@@ -34,12 +37,38 @@ public class FileDownloadController : Controller
             return BadRequest(new { message = "Assembly is required" });
         }
 
-        var fileName = (request.AssemblyNumber ?? request.AssemblyName ?? "download") + ".csv";
+        var baseName = request.AssemblyNumber ?? request.AssemblyName ?? "download";
+        var utf8FileName = UtilHelper.EnsureCsvExtension(UtilHelper.SanitizeFileName(baseName));
+        var asciiFileName = UtilHelper.EnsureCsvExtension(UtilHelper.ToAsciiFallback(utf8FileName));
+
         Response.ContentType = "text/csv";
-        Response.Headers.ContentDisposition = new Microsoft.Net.Http.Headers.ContentDispositionHeaderValue("attachment")
+        Response.Headers[HeaderNames.CacheControl] = "no-store";
+
+        var disposition = new ContentDispositionHeaderValue("attachment")
         {
-            FileNameStar = fileName
-        }.ToString();
+            FileName = asciiFileName,
+            FileNameStar = utf8FileName
+        };
+
+        Response.Headers[HeaderNames.ContentDisposition] = disposition.ToString();
+
+        // Register completion callback to record successful downloads without delaying response
+        var userId = HttpContext.Session.GetInt32("UserId");
+        if (userId.HasValue)
+        {
+            var entry = new FileDownloadEntry
+            {
+                UserId = userId.Value,
+                Assembly = request.AssemblyNumber ?? request.AssemblyName ?? string.Empty,
+                Booths = string.IsNullOrWhiteSpace(request.BoothRange) ? null : request.BoothRange,
+                DeviceType = UtilHelper.MapDeviceType(Request.Headers["User-Agent"].ToString()),
+                DownloadedAt = DateTime.UtcNow
+            };
+            Response.OnCompleted(async () =>
+            {
+                try { await _databaseService.AddFileDownloadEntryAsync(entry); } catch { }
+            });
+        }
 
         try
         {
@@ -59,4 +88,6 @@ public class FileDownloadController : Controller
             return StatusCode(500, new { message = "Failed to generate CSV." });
         }
     }
+
+    // Helper methods moved to DownloadHelper
 }

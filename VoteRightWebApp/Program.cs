@@ -51,6 +51,7 @@ try
 
     // Remove legacy services from compilation if still present (LocalFileService/S3Service not registered)
     builder.Services.AddScoped<DatabaseService>();
+    builder.Services.AddScoped<IUserService, UserService>();
 
     // Add response compression for faster downloads
     builder.Services.AddResponseCompression(options =>

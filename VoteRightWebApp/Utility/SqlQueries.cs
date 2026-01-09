@@ -1,4 +1,4 @@
-namespace VoteRightWebApp.Data;
+namespace VoteRightWebApp.Utility;
 
 public static class SqlQueries
 {

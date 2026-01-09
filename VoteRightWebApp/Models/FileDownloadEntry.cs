@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace VoteRightWebApp.Models;
 
-public class Download
+public class FileDownloadEntry
 {
     [Key]
     public int Id { get; set; }

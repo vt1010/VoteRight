@@ -1,6 +1,7 @@
+using System.Data;
 using System.Text;
 using Npgsql;
-using VoteRightWebApp.Data;
+using VoteRightWebApp.Utility;
 
 namespace VoteRightWebApp.Services;
 
@@ -67,7 +68,7 @@ public class VoterExportService : IVoterExportService
             cmd.Parameters.AddWithValue("end", endPartNo.Value);
         }
 
-        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        await using var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SequentialAccess, cancellationToken);
 
         await using var writer = new StreamWriter(outputStream, new UTF8Encoding(true), bufferSize: 64 * 1024, leaveOpen: true);
         var headers = new [] { "document_id","serial_no","epic_no","name","relation_type","father_name","mother_name","husband_name","other_name","house_no","age","gender","street_names_and_numbers","part_no","assembly","epic_valid","deleted" };
