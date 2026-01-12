@@ -11,7 +11,7 @@ public class FileDownloadEntry
     public int UserId { get; set; }
 
     [Required]
-    [MaxLength(50)]
+    [MaxLength(100)]
     public string Assembly { get; set; } = string.Empty;
 
     [MaxLength(100)]
