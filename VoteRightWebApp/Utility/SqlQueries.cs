@@ -35,14 +35,22 @@ public static class SqlQueries
     }
 
     public static class Assemblies
-    {
-        public const string DistinctWithBoothCount = @"SELECT assembly AS name,
-                                                              assembly AS number,
-                                                              COUNT(DISTINCT part_no) AS booth_count
-                                                       FROM public.voters
-                                                       WHERE assembly IS NOT NULL AND assembly <> ''
-                                                       GROUP BY assembly
-                                                       ORDER BY assembly";
+    {                
+        public const string DistinctByDistrictWithBoothCount = @"SELECT
+                                                                                                                                        v.constituency_details->>'assembly_constituency_name'   AS name,
+                                                                                                                                        v.constituency_details->>'assembly_constituency_number' AS number,
+                                                                                                                                        COUNT(DISTINCT v.constituency_details->>'part_number')  AS booth_count
+                                                                                                                                 FROM public.voters v
+                                                                                                                                 JOIN public.metadata m
+                                                                                                                                     ON m.part_no::text = v.constituency_details->>'part_number'
+                                                                                                                                 WHERE NULLIF(v.constituency_details->>'assembly_constituency_name', '') IS NOT NULL
+                                                                                                                                     AND NULLIF(v.constituency_details->>'assembly_constituency_number', '') IS NOT NULL
+                                                                                                                                     AND NULLIF(m.district, '') IS NOT NULL
+                                                                                                                                     AND m.district = @district
+                                                                                                                                 GROUP BY
+                                                                                                                                         v.constituency_details->>'assembly_constituency_name',
+                                                                                                                                         v.constituency_details->>'assembly_constituency_number'
+                                                                                                                                 ORDER BY CAST(v.constituency_details->>'assembly_constituency_number' AS INTEGER)";
     }
 
     public static class Voters

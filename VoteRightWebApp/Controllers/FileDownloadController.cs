@@ -24,9 +24,21 @@ public class FileDownloadController : Controller
     [HttpGet]
     public async Task<IActionResult> Index()
     {
-        var assemblies = await _databaseService.GetAssembliesAsync();
-        ViewBag.Assemblies = assemblies;
+        var districts = await _databaseService.GetDistinctDistrictsAsync();
+        ViewBag.Districts = districts;
         return View();
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAssembliesByDistrict([FromQuery] string district)
+    {
+        if (string.IsNullOrWhiteSpace(district))
+        {
+            return BadRequest(new { message = "District is required" });
+        }
+
+        var assemblies = await _databaseService.GetAssembliesByDistrictAsync(district);
+        return Json(assemblies.Select(a => new { name = a.Name, number = a.Number, boothCount = a.BoothCount }));
     }
 
     [HttpPost]

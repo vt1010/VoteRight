@@ -19,17 +19,33 @@
                 <div class="card-body">
                     <form id="filterForm">
                         <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="assembly" class="form-label">Select Assembly</label>
-                                <select class="form-select" id="assembly" name="assembly">
-                                    <option value="">-- All Assemblies --</option>
-                                    @foreach (var assembly in ViewBag.Assemblies)
+                            <div class="col-md-4">
+                                <label for="district" class="form-label">Select District</label>
+                                <select class="form-select" id="district" name="district">
+                                    <option value="">-- Select District --</option>
+                                    @if (ViewBag.Districts != null)
                                     {
-                                        <option value="@assembly.Number" data-booth-count="@assembly.BoothCount">@assembly.Name</option>
+                                        foreach (var district in ViewBag.Districts)
+                                        {
+                                            <option value="@district">@district</option>
+                                        }
                                     }
                                 </select>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
+                                <label for="assembly" class="form-label">Select Assembly</label>
+                                <select class="form-select" id="assembly" name="assembly" disabled>
+                                    <option value="">-- Select Assembly --</option>
+                                    @if (ViewBag.Assemblies != null)
+                                    {
+                                        foreach (var assembly in ViewBag.Assemblies)
+                                        {
+                                            <option value="@assembly.Number" data-booth-count="@assembly.BoothCount">@assembly.Name</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4">
                                 <label class="form-label">Enter Booth number range</label>
                                 <input type="text" class="form-control" id="boothRange" name="boothRange"
                                        placeholder="Booth number range like 20-45" autocomplete="off" inputmode="numeric" pattern="[0-9\- ]*">
@@ -83,7 +99,39 @@
 
         document.addEventListener('DOMContentLoaded', function() {
 
+             const districtDropdown = document.getElementById('district');
              const assemblyDropdown = document.getElementById('assembly');
+
+             // District -> Assemblies linkage
+             if (districtDropdown) {
+                 districtDropdown.addEventListener('change', async function() {
+                     const district = this.value;
+                     // Reset assemblies
+                     assemblyDropdown.innerHTML = '<option value="">-- Select Assembly --</option>';
+                     assemblyDropdown.disabled = true;
+                     const hint = document.getElementById('availableBoothsHint'); if (hint) hint.style.display = 'none';
+                     const countEl = document.getElementById('availableBoothCount'); if (countEl) countEl.textContent = '';
+                     const boothEl = document.getElementById('boothRange'); if (boothEl) boothEl.value = '';
+
+                     if (!district) { updateDownloadBtnState(); return; }
+                     try {
+                         const res = await fetch('/FileDownload/GetAssembliesByDistrict?district=' + encodeURIComponent(district));
+                         const data = await res.json();
+                         if (Array.isArray(data) && data.length > 0) {
+                             for (const a of data) {
+                                 const opt = document.createElement('option');
+                                 opt.value = a.number;
+                                 opt.textContent = a.name;
+                                 if (a.boothCount != null) opt.dataset.boothCount = a.boothCount;
+                                 assemblyDropdown.appendChild(opt);
+                             }
+                             assemblyDropdown.disabled = false;
+                         }
+                     } catch (e) {}
+                     updateDownloadBtnState();
+                 });
+             }
+
              assemblyDropdown.addEventListener('change', function() {
                  // Update available booths hint based on selected option's data attribute
                  const hint = document.getElementById('availableBoothsHint');
@@ -104,6 +152,9 @@
 
             // Initialize hint based on current selection (if any)
             assemblyDropdown.dispatchEvent(new Event('change'));
+            if (districtDropdown && districtDropdown.value) {
+                districtDropdown.dispatchEvent(new Event('change'));
+            }
 
             // Filter form submission
             document.getElementById('filterForm').addEventListener('submit', async function(e) {
@@ -127,7 +178,13 @@
 
             // Reset button
             document.getElementById('resetFilter').addEventListener('click', function() {
-                document.getElementById('assembly').value = '';
+                const assemblyEl = document.getElementById('assembly');
+                const districtEl = document.getElementById('district');
+                if (districtEl) districtEl.value = '';
+                if (assemblyEl) {
+                    assemblyEl.innerHTML = '<option value="">-- Select Assembly --</option>';
+                    assemblyEl.disabled = true;
+                }
                 document.getElementById('boothRange').value = '';
                 document.getElementById('downloadBtn').disabled = true;
                 // Hide hint when filters are reset

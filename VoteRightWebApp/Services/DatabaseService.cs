@@ -15,12 +15,13 @@ namespace VoteRightWebApp.Services
                 ?? throw new InvalidOperationException("PostgresConnection not configured.");
         }
 
-        public async Task<List<dynamic>> GetAssembliesAsync()
+        public async Task<List<dynamic>> GetAssembliesByDistrictAsync(string district)
         {
             var list = new List<dynamic>();
             await using var conn = new NpgsqlConnection(_connectionString);
             await conn.OpenAsync();
-            await using var cmd = new NpgsqlCommand(SqlQueries.Assemblies.DistinctWithBoothCount, conn);
+            await using var cmd = new NpgsqlCommand(SqlQueries.Assemblies.DistinctByDistrictWithBoothCount, conn);
+            cmd.Parameters.AddWithValue("district", district);
             await using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
